@@ -4,17 +4,16 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const file = form.get("file");
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json({ ok: false, error: "No file provided" }, { status: 400 });
+    if (!(file instanceof File)) {
+      return NextResponse.json({ ok: false, error: "No file" }, { status: 400 });
     }
-    // TODO: store the file somewhere. For now just echo the name.
-    return NextResponse.json({ ok: true, filename: (file as File).name });
+    // TODO: store the file somewhere (S3, etc.). For now we just echo back the name.
+    return NextResponse.json({ ok: true, filename: file.name });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown" }, { status: 400 });
   }
 }
 
-// Helpful for preflight or accidental GETs
 export function OPTIONS() {
   return NextResponse.json(
     {},
