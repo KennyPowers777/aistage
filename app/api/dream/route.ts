@@ -2,17 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const prompt = body?.prompt ?? "";
-    if (!prompt) {
-      return NextResponse.json({ ok: false, error: "Missing prompt" }, { status: 400 });
-    }
+    const { prompt } = await req.json();
+    if (!prompt) return NextResponse.json({ error: "Missing prompt" }, { status: 400 });
 
-    // TODO: call your real staging backend here.
-    // For now, return a known local asset so the client always gets JSON.
-    return NextResponse.json({ ok: true, resultUrl: "/generated-pic-2.jpg" });
+    // TODO: call Bria here using your Production/Staging key.
+    // For now we just fake a URL so your UI stops crashing.
+    const fakeUrl = `https://example.com/fake-dream.jpg`;
+
+    return NextResponse.json({ ok: true, resultUrl: fakeUrl });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown" }, { status: 400 });
   }
 }
 
