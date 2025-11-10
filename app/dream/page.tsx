@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { useState } from "react";
 import Image from "next/image";
 import { UrlBuilder } from "@bytescale/sdk";
-import type { UploadWidgetConfig } from "@bytescale/upload-widget";
+import { UploadWidgetConfig } from "@bytescale/upload-widget";
 import { UploadDropzone } from "@bytescale/upload-widget-react";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { CompareSlider } from "../../components/CompareSlider";
 import Footer from "../../components/Footer";
 import Header from "../../components/Header";
@@ -40,7 +41,9 @@ const options: UploadWidgetConfig = {
 };
 
 export default function DreamPage() {
+  // NEW: free-text description
   const [description, setDescription] = useState<string>("");
+
   const [originalPhoto, setOriginalPhoto] = useState<string | null>(null);
   const [restoredImage, setRestoredImage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -74,25 +77,32 @@ export default function DreamPage() {
   );
 
   async function generatePhoto(fileUrl: string) {
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
     setLoading(true);
-    const res = await fetch("/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/" },
-      // 👇 Send the new description value to the API
-     body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
-,
+    setError(null);
 
-    });
+    try {
+      const res = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // IMPORTANT: single 'body' key, and valid JSON with description included
+        body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
+      });
 
-    const data = await res.json();
-    if (res.status !== 200) {
-      setError(typeof data === "string" ? data : "Generation failed.");
-    } else {
-      // your code assumed index [1]; keep that if that's how your API returns it
-      setRestoredImage(Array.isArray(data) ? data[1] : data.url || data.image || null);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(typeof data === "string" ? data : "Generation failed");
+      } else {
+        // Depending on your API, adjust this line. Some repos return an array, others an object.
+        // If your API returns { outputUrl: "..." }, use setRestoredImage(data.outputUrl)
+        setRestoredImage(Array.isArray(data) ? data[1] : data.outputUrl || data.url || null);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Unexpected error");
+    } finally {
+      setTimeout(() => setLoading(false), 1300);
     }
-    setTimeout(() => setLoading(false), 1300);
   }
 
   return (
@@ -108,66 +118,59 @@ export default function DreamPage() {
             <motion.div className="flex justify-between items-center w-full flex-col mt-4">
               {!restoredImage && (
                 <>
-                  {/* Step 1: Theme */}
+                  {/* THEME DROPDOWN */}
                   <div className="space-y-4 w-full max-w-sm">
                     <div className="flex mt-3 items-center space-x-3">
                       <Image src="/number-1-white.svg" width={30} height={30} alt="1 icon" />
                       <p className="text-left font-medium">Choose your room theme.</p>
                     </div>
-                    <DropDown theme={theme} setTheme={(t) => setTheme(t as typeof theme)} themes={themes} />
-                    {/* ✅ DESCRIPTION INPUT (custom staging instructions) */}
-<div className="space-y-4 w-full max-w-sm mt-6">
-  <div className="flex items-center space-x-3">
-    <Image
-      src="/number-3-white.svg"
-      width={30}
-      height={30}
-      alt="3 icon"
-    />
-    <p className="text-left font-medium">
-      (Optional) Add detailed staging instructions.
-    </p>
-  </div>
-
-  <textarea
-    value={description}
-    onChange={(e) => setDescription(e.target.value)}
-    placeholder="Style Package A: make living look wider, highlight natural light, premium dining, stainless steel appliances, oversized Japanese brushstroke artwork, light warm oak furniture, cream upholstery, no clutter."
-    className="w-full rounded-xl bg-white/10 border border-white/20 p-3 text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    rows={4}
-  />
-</div>
-
+                    <DropDown
+                      theme={theme}
+                      setTheme={(newTheme) => setTheme(newTheme as typeof theme)}
+                      themes={themes}
+                    />
                   </div>
 
-                  {/* Step 2: Room */}
+                  {/* ROOM DROPDOWN */}
                   <div className="space-y-4 w-full max-w-sm">
                     <div className="flex mt-10 items-center space-x-3">
                       <Image src="/number-2-white.svg" width={30} height={30} alt="2 icon" />
                       <p className="text-left font-medium">Choose your room type.</p>
                     </div>
-                    <DropDown theme={room} setTheme={(r) => setRoom(r as typeof room)} themes={rooms} />
-                  </div>
-
-                  {/* ✅ NEW Step 3: Free-text Description */}
-                  <div className="space-y-3 w-full max-w-sm mt-8 text-left">
-                    <div className="flex items-center space-x-3">
-                      <Image src="/number-3-white.svg" width={30} height={30} alt="3 icon" />
-                      <p className="font-medium">Add a description (optional).</p>
-                    </div>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="e.g., Style Package A: Markham pro buyer; make living look wider; highlight natural light; premium dining; bedrooms appear larger; baths more luxurious; add S/S appliances; keep layout consistent across angles."
-                      className="w-full rounded-xl bg-white/10 border border-white/20 p-3 text-slate-100 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={4}
+                    <DropDown
+                      theme={room}
+                      setTheme={(newRoom) => setRoom(newRoom as typeof room)}
+                      themes={rooms}
                     />
                   </div>
 
-                  {/* Step 4: Upload */}
-                  <div className="mt-6 w-full max-w-sm">
-                    <div className="flex items-center space-x-3">
-                      <Image src="/number-4-white.svg" width={30} height={30} alt="4 icon" />
+                  {/* NEW: DESCRIPTION TEXTAREA */}
+                  <div className="space-y-2 w-full max-w-sm mt-6">
+                    <label htmlFor="description" className="block text-left font-medium">
+                      Optional: Add a detailed description
+                    </label>
+                    <textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="w-full rounded-xl border border-gray-700 bg-transparent p-3 text-slate-100 outline-none focus:ring-2 focus:ring-blue-600"
+                      rows={5}
+                      placeholder={
+                        "Style Package A — Professional Chinese buyer in Markham:\n" +
+                        "- Make living look wider & highlight natural light\n" +
+                        "- Premium dining setting; keep table + 6 chairs layout\n" +
+                        "- Bedrooms appear larger (low-profile bed, light textiles)\n" +
+                        "- Bathrooms more luxurious (clean marble look, warm lighting)\n" +
+                        "- Stainless steel appliances in kitchen; minimalist Asian accents\n" +
+                        "- Keep render consistency across angles; no layout changes"
+                      }
+                    />
+                  </div>
+
+                  {/* UPLOAD */}
+                  <div className="mt-4 w-full max-w-sm">
+                    <div className="flex mt-6 w-96 items-center space-x-3">
+                      <Image src="/number-3-white.svg" width={30} height={30} alt="3 icon" />
                       <p className="text-left font-medium">Upload a picture of your room.</p>
                     </div>
                   </div>
@@ -176,7 +179,8 @@ export default function DreamPage() {
 
               {restoredImage && (
                 <div>
-                  Here's your remodeled <b>{room.toLowerCase()}</b> in the <b>{theme.toLowerCase()}</b> theme!
+                  Here's your remodeled <b>{room.toLowerCase()}</b> in the{" "}
+                  <b>{theme.toLowerCase()}</b> theme!
                 </div>
               )}
 
@@ -184,7 +188,7 @@ export default function DreamPage() {
                 <Toggle
                   className={`${restoredLoaded ? "visible mb-6" : "invisible"}`}
                   sideBySide={sideBySide}
-                  setSideBySide={(v) => setSideBySide(v)}
+                  setSideBySide={(newVal) => setSideBySide(newVal)}
                 />
               </div>
 
@@ -195,14 +199,26 @@ export default function DreamPage() {
               {!originalPhoto && <UploadDropZone />}
 
               {originalPhoto && !restoredImage && (
-                <Image alt="original photo" src={originalPhoto} className="rounded-2xl h-96" width={475} height={475} />
+                <Image
+                  alt="original photo"
+                  src={originalPhoto}
+                  className="rounded-2xl h-96"
+                  width={475}
+                  height={475}
+                />
               )}
 
               {restoredImage && originalPhoto && !sideBySide && (
                 <div className="flex sm:space-x-4 sm:flex-row flex-col">
                   <div>
                     <h2 className="mb-1 font-medium text-lg">Original Room</h2>
-                    <Image alt="original photo" src={originalPhoto} className="rounded-2xl relative w-full h-96" width={475} height={475} />
+                    <Image
+                      alt="original photo"
+                      src={originalPhoto}
+                      className="rounded-2xl relative w-full h-96"
+                      width={475}
+                      height={475}
+                    />
                   </div>
                   <div className="sm:mt-0 mt-8">
                     <h2 className="mb-1 font-medium text-lg">Generated Room</h2>
@@ -248,11 +264,10 @@ export default function DreamPage() {
                     Generate New Room
                   </button>
                 )}
-                {restoredLoaded && restoredImage && photoName && (
+
+                {restoredLoaded && restoredImage && (
                   <button
-                    onClick={() => {
-                      downloadPhoto(restoredImage, appendNewToName(photoName));
-                    }}
+                    onClick={() => downloadPhoto(restoredImage, appendNewToName(photoName || "generated"))}
                     className="bg-white rounded-full text-black border font-medium px-4 py-2 mt-8 hover:bg-gray-100 transition"
                   >
                     Download Generated Room
