@@ -1,54 +1,52 @@
-// app/api/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
-
-// If you need to restrict this, replace "*" with your origin.
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-function json(data: any, init?: number | ResponseInit) {
-  const base: ResponseInit =
-    typeof init === "number" ? { status: init } : init || {};
-  return NextResponse.json(data, { ...base, headers: { ...CORS_HEADERS, ...(base.headers || {}) } });
-}
-
-export async function OPTIONS() {
-  // Preflight response
-  return json({}, 200);
-}
-
-export async function GET() {
-  // Explicitly disallow GET but return JSON, not an empty body
-  return json(
-    { ok: false, error: "Method Not Allowed. Use POST." },
-    { status: 405, headers: { Allow: "POST, OPTIONS" } }
-  );
-}
 
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const file = form.get("file");
 
-    if (!file || !(file instanceof File)) {
-      return json({ ok: false, error: 'Missing "file" in multipart/form-data.' }, 400);
+    if (!(file instanceof File)) {
+      return NextResponse.json(
+        { ok: false, error: "No file provided (key should be 'file')." },
+        { status: 400 }
+      );
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const size = arrayBuffer.byteLength;
-
-    // You can persist the file to storage here.
-    // For now we just echo metadata back to the client.
-    return json({
+    // Demo: we are not persisting on disk here (Vercel fs is ephemeral).
+    // This route simply echoes metadata back.
+    return NextResponse.json({
       ok: true,
-      filename: file.name || "unnamed",
-      mime: file.type || "application/octet-stream",
-      size,
-      message: "File received successfully.",
+      filename: file.name,
+      size: file.size,
+      type: file.type,
     });
-  } catch (err: any) {
-    return json({ ok: false, error: err?.message ?? "Unknown upload error" }, 400);
+  } catch (e: any) {
+    return NextResponse.json(
+      { ok: false, error: e?.message ?? "Upload failed" },
+      { status: 400 }
+    );
   }
+}
+
+// Handle preflight if you ever call this from another origin
+export function OPTIONS() {
+  return NextResponse.json(
+    {},
+    {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    }
+  );
+}
+
+// Make 405s return JSON (prevents "Unexpected end of JSON input")
+export function GET() {
+  return NextResponse.json(
+    { ok: false, error: "Method Not Allowed. Use POST." },
+    { status: 405, headers: { Allow: "POST, OPTIONS" } }
+  );
 }
