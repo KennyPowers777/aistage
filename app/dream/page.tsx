@@ -15,15 +15,6 @@ import Toggle from "../../components/Toggle";
 import appendNewToName from "../../utils/appendNewToName";
 import downloadPhoto from "../../utils/downloadPhoto";
 import DropDown from "../../components/DropDown";
-<label>Description (optional):</label>
-<textarea
-  className="w-full border p-2 rounded mb-4"
-  rows={3}
-  placeholder="Type staging instructions here..."
-  value={prompt}
-  onChange={(e) => setPrompt(e.target.value)}
-/>
-
 import { roomType, rooms, themeType, themes } from "../../utils/dropdownTypes";
 
 const options: UploadWidgetConfig = {
