@@ -1,31 +1,31 @@
-// app/generate/route.ts
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const { imageUrl, theme, room, description } = await req.json();
-
-    if (!imageUrl || !theme || !room) {
-      return NextResponse.json(
-        { error: "Missing required fields: imageUrl, theme, room" },
-        { status: 400 }
-      );
+    const payload = await req.json().catch(() => null);
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    // TODO: Replace this stub with your actual generation call.
-    // Example:
-    // const apiRes = await fetch("https://your-model-endpoint", { ... });
-    // const apiData = await apiRes.json();
-    // const stagedUrl = apiData.output?.[0];
+    const { imageUrl, theme, room, description } = payload;
 
-    // Temporary echo so the client always gets valid JSON:
-    const stagedUrl = imageUrl; // replace with real staged URL when wired
+    if (!imageUrl) {
+      return NextResponse.json({ error: "imageUrl is required" }, { status: 400 });
+    }
 
-    return NextResponse.json({ output: [stagedUrl] }, { status: 200 });
-  } catch (err: any) {
+    // TODO: Replace with your actual generation call (Replicate/Inference/etc.)
+    // For now, pretend we generated a new image. Use the same URL as a placeholder.
+    const generatedUrl = imageUrl;
+
     return NextResponse.json(
-      { error: err?.message || "Server error parsing request" },
-      { status: 500 }
+      {
+        ok: true,
+        images: [imageUrl, generatedUrl],
+        meta: { theme, room, description },
+      },
+      { status: 200 }
     );
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Server error" }, { status: 500 });
   }
 }
