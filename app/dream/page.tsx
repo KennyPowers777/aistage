@@ -78,9 +78,10 @@ export default function DreamPage() {
     setLoading(true);
     const res = await fetch("/generate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/" },
       // 👇 Send the new description value to the API
-      body: body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
+     body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
+,
 
     });
 
