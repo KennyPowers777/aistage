@@ -1,3 +1,8 @@
+"use client";
+import { useState } from "react";
+import { uploadImage, dream, generate } from "@/utils/api";
+
+
 import Image from "next/image";
 import Link from "next/link";
 import Footer from "../components/Footer";
@@ -5,7 +10,64 @@ import Header from "../components/Header";
 import SquigglyLines from "../components/SquigglyLines";
 
 export default function HomePage() {
+    const [file, setFile] = useState<File | null>(null);
+  const [log, setLog] = useState<string>("");
+
+  async function handleUpload() {
+    if (!file) return;
+    setLog("Uploading...");
+    try {
+      const result = await uploadImage(file);
+      setLog(`✅ Uploaded: ${result.filename}`);
+    } catch (err: any) {
+      setLog(`❌ ${err.message}`);
+    }
+  }
+
+  async function handleDream() {
+    setLog("Generating staged result...");
+    try {
+      const result = await dream("modern bedroom staging");
+      setLog(`✅ Dream image ready: ${result.resultUrl}`);
+    } catch (err: any) {
+      setLog(`❌ ${err.message}`);
+    }
+  }
+
+  async function handleGenerate() {
+    setLog("Generating variations...");
+    try {
+      const results = await generate("living room modern", 2);
+      setLog(`✅ Generated ${results.length} images`);
+    } catch (err: any) {
+      setLog(`❌ ${err.message}`);
+    }
+  }
+
   return (
+    <div style={{ marginTop: 24 }}>
+
+  <input
+    type="file"
+    onChange={(e) => setFile(e.target.files?.[0] || null)}
+  />
+
+  <button onClick={handleUpload} style={{ marginLeft: 12 }}>
+    Upload Image
+  </button>
+
+  <button onClick={handleDream} style={{ marginLeft: 12 }}>
+    Dream (Stage)
+  </button>
+
+  <button onClick={handleGenerate} style={{ marginLeft: 12 }}>
+    Generate New Versions
+  </button>
+
+  <p style={{ marginTop: 12 }}>{log}</p>
+
+</div>
+
     <div className="flex max-w-6xl mx-auto flex-col items-center justify-center py-2 min-h-screen">
       <Header />
       <main className="flex flex-1 w-full flex-col items-center justify-center text-center px-4 sm:mt-20 mt-20 background-gradient">
