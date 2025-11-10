@@ -80,7 +80,8 @@ export default function DreamPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // 👇 Send the new description value to the API
-      body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
+      body: body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
+
     });
 
     const data = await res.json();
@@ -113,6 +114,29 @@ export default function DreamPage() {
                       <p className="text-left font-medium">Choose your room theme.</p>
                     </div>
                     <DropDown theme={theme} setTheme={(t) => setTheme(t as typeof theme)} themes={themes} />
+                    {/* ✅ DESCRIPTION INPUT (custom staging instructions) */}
+<div className="space-y-4 w-full max-w-sm mt-6">
+  <div className="flex items-center space-x-3">
+    <Image
+      src="/number-3-white.svg"
+      width={30}
+      height={30}
+      alt="3 icon"
+    />
+    <p className="text-left font-medium">
+      (Optional) Add detailed staging instructions.
+    </p>
+  </div>
+
+  <textarea
+    value={description}
+    onChange={(e) => setDescription(e.target.value)}
+    placeholder="Style Package A: make living look wider, highlight natural light, premium dining, stainless steel appliances, oversized Japanese brushstroke artwork, light warm oak furniture, cream upholstery, no clutter."
+    className="w-full rounded-xl bg-white/10 border border-white/20 p-3 text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    rows={4}
+  />
+</div>
+
                   </div>
 
                   {/* Step 2: Room */}
