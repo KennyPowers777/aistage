@@ -77,28 +77,60 @@ export default function DreamPage() {
   );
 
   async function generatePhoto(fileUrl: string) {
-    setLoading(true);
-    setError(null);
+  // tiny delay is fine
+  await new Promise((r) => setTimeout(r, 200));
+  setLoading(true);
+  setError(null);
 
+  try {
+    const res = await fetch("/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageUrl: fileUrl,
+        theme,
+        room,
+        description, // <- include free-text description
+      }),
+    });
+
+    // Read as text first so we can show a clean error if it isn't JSON
+    const text = await res.text();
+    let data: any = null;
     try {
-      const res = await fetch("/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // IMPORTANT: send description too
-        body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
-      });
+      data = JSON.parse(text);
+    } catch {
+      setError("Server returned a non-JSON response.");
+      setLoading(false);
+      return;
+    }
 
-      const data = await res.json();
-      if (!res.ok) {
-        setError(typeof data === "string" ? data : data?.error || "Failed to generate image.");
-      } else {
-        // your API returns an array; keep your original behavior
-        setRestoredImage(Array.isArray(data) ? data[1] : data?.url || null);
-      }
-    } catch (e: any) {
-      setError(e?.message || "Network error.");
-    } finally {
-      setTimeout(() => setLoading(false), 800);
+    if (!res.ok) {
+      setError(data?.error || "Generation failed.");
+      setLoading(false);
+      return;
+    }
+
+    // Support multiple possible API shapes
+    const stagedUrl =
+      data?.output?.[0] ??
+      data?.image ??
+      (Array.isArray(data) ? data[0] : null);
+
+    if (!stagedUrl) {
+      setError("No image URL returned by the server.");
+      setLoading(false);
+      return;
+    }
+
+    setRestoredImage(stagedUrl);
+  } catch (e: any) {
+    setError(e?.message || "Network error.");
+  } finally {
+    setTimeout(() => setLoading(false), 300);
+  }
+}
+
     }
   }
 
