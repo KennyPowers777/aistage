@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { UrlBuilder } from "@bytescale/sdk";
 import { UploadWidgetConfig } from "@bytescale/upload-widget";
 import { UploadDropzone } from "@bytescale/upload-widget-react";
-import { AnimatePresence, motion } from "framer-motion";
 
 import { CompareSlider } from "../../components/CompareSlider";
 import Footer from "../../components/Footer";
@@ -19,7 +19,9 @@ import DropDown from "../../components/DropDown";
 import { roomType, rooms, themeType, themes } from "../../utils/dropdownTypes";
 
 const options: UploadWidgetConfig = {
-  apiKey: process.env.NEXT_PUBLIC_UPLOAD_API_KEY ? process.env.NEXT_PUBLIC_UPLOAD_API_KEY : "free",
+  apiKey: !!process.env.NEXT_PUBLIC_UPLOAD_API_KEY
+    ? process.env.NEXT_PUBLIC_UPLOAD_API_KEY
+    : "free",
   maxFileCount: 1,
   mimeTypes: ["image/jpeg", "image/png", "image/jpg"],
   editor: { images: { crop: false } },
@@ -41,9 +43,7 @@ const options: UploadWidgetConfig = {
 };
 
 export default function DreamPage() {
-  // NEW: free-text description
-  const [description, setDescription] = useState<string>("");
-
+  const [description, setDescription] = useState("");
   const [originalPhoto, setOriginalPhoto] = useState<string | null>(null);
   const [restoredImage, setRestoredImage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -79,29 +79,25 @@ export default function DreamPage() {
   async function generatePhoto(fileUrl: string) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     setLoading(true);
-    setError(null);
-
     try {
       const res = await fetch("/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // IMPORTANT: single 'body' key, and valid JSON with description included
+        // 👇 include the free-text description
         body: JSON.stringify({ imageUrl: fileUrl, theme, room, description }),
       });
 
-      const data = await res.json();
-
+      const payload = await res.json();
       if (!res.ok) {
-        setError(typeof data === "string" ? data : "Generation failed");
+        setError(typeof payload === "string" ? payload : "Generation failed.");
       } else {
-        // Depending on your API, adjust this line. Some repos return an array, others an object.
-        // If your API returns { outputUrl: "..." }, use setRestoredImage(data.outputUrl)
-        setRestoredImage(Array.isArray(data) ? data[1] : data.outputUrl || data.url || null);
+        // Most repos return an array like [orig, generatedUrl]
+        setRestoredImage(payload[1] ?? payload.generated ?? null);
       }
     } catch (e: any) {
-      setError(e?.message || "Unexpected error");
+      setError(e?.message || "Network error");
     } finally {
-      setTimeout(() => setLoading(false), 1300);
+      setTimeout(() => setLoading(false), 800);
     }
   }
 
@@ -118,7 +114,7 @@ export default function DreamPage() {
             <motion.div className="flex justify-between items-center w-full flex-col mt-4">
               {!restoredImage && (
                 <>
-                  {/* THEME DROPDOWN */}
+                  {/* THEME */}
                   <div className="space-y-4 w-full max-w-sm">
                     <div className="flex mt-3 items-center space-x-3">
                       <Image src="/number-1-white.svg" width={30} height={30} alt="1 icon" />
@@ -131,7 +127,7 @@ export default function DreamPage() {
                     />
                   </div>
 
-                  {/* ROOM DROPDOWN */}
+                  {/* ROOM TYPE */}
                   <div className="space-y-4 w-full max-w-sm">
                     <div className="flex mt-10 items-center space-x-3">
                       <Image src="/number-2-white.svg" width={30} height={30} alt="2 icon" />
@@ -144,27 +140,21 @@ export default function DreamPage() {
                     />
                   </div>
 
-                  {/* NEW: DESCRIPTION TEXTAREA */}
-                  <div className="space-y-2 w-full max-w-sm mt-6">
-                    <label htmlFor="description" className="block text-left font-medium">
-                      Optional: Add a detailed description
+                  {/* FREE-TEXT DESCRIPTION (textarea) */}
+                  <div className="mt-6 w-full max-w-sm text-left">
+                    <label className="block mb-2 text-sm font-medium">
+                      Optional details (passed to the generator)
                     </label>
                     <textarea
-                      id="description"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="w-full rounded-xl border border-gray-700 bg-transparent p-3 text-slate-100 outline-none focus:ring-2 focus:ring-blue-600"
-                      rows={5}
-                      placeholder={
-                        "Style Package A — Professional Chinese buyer in Markham:\n" +
-                        "- Make living look wider & highlight natural light\n" +
-                        "- Premium dining setting; keep table + 6 chairs layout\n" +
-                        "- Bedrooms appear larger (low-profile bed, light textiles)\n" +
-                        "- Bathrooms more luxurious (clean marble look, warm lighting)\n" +
-                        "- Stainless steel appliances in kitchen; minimalist Asian accents\n" +
-                        "- Keep render consistency across angles; no layout changes"
-                      }
+                      rows={4}
+                      className="w-full rounded-xl bg-white/10 border border-white/20 p-3 outline-none"
+                      placeholder="Style Package A. Professional Chinese buyer in Markham. Make living look wider; highlight natural light; premium dining setting; make bedrooms look larger; make baths more luxurious; add s/s appliances."
                     />
+                    <p className="text-xs text-white/60 mt-1">
+                      Tip: include any specific furniture/layout notes here.
+                    </p>
                   </div>
 
                   {/* UPLOAD */}
@@ -237,7 +227,10 @@ export default function DreamPage() {
               )}
 
               {loading && (
-                <button disabled className="bg-blue-500 rounded-full text-white font-medium px-4 pt-2 pb-3 mt-8 w-40">
+                <button
+                  disabled
+                  className="bg-blue-500 rounded-full text-white font-medium px-4 pt-2 pb-3 mt-8 w-40"
+                >
                   <span className="pt-4">
                     <LoadingDots color="white" style="large" />
                   </span>
@@ -245,7 +238,10 @@ export default function DreamPage() {
               )}
 
               {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mt-8" role="alert">
+                <div
+                  className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mt-8"
+                  role="alert"
+                >
                   <span className="block sm:inline">{error}</span>
                 </div>
               )}
@@ -264,10 +260,11 @@ export default function DreamPage() {
                     Generate New Room
                   </button>
                 )}
-
                 {restoredLoaded && restoredImage && (
                   <button
-                    onClick={() => downloadPhoto(restoredImage, appendNewToName(photoName || "generated"))}
+                    onClick={() => {
+                      downloadPhoto(restoredImage, appendNewToName(photoName!));
+                    }}
                     className="bg-white rounded-full text-black border font-medium px-4 py-2 mt-8 hover:bg-gray-100 transition"
                   >
                     Download Generated Room
